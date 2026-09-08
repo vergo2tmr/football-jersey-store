@@ -1,77 +1,99 @@
-// Product Data
-const products = [
-    {
-        id: 1,
-        name: "Classic Black Jersey",
-        price: 89900,
-        emoji: "⚫"
-    },
-    {
-        id: 2,
-        name: "White Elegance",
-        price: 89900,
-        emoji: "⚪"
-    },
-    {
-        id: 3,
-        name: "Red Thunder",
-        price: 94900,
-        emoji: "🔴"
-    },
-    {
-        id: 4,
-        name: "Blue Velocity",
-        price: 94900,
-        emoji: "🔵"
-    },
-    {
-        id: 5,
-        name: "Gold Premium",
-        price: 124900,
-        emoji: "🟡"
-    },
-    {
-        id: 6,
-        name: "Green Essence",
-        price: 94900,
-        emoji: "🟢"
-    },
-    {
-        id: 7,
-        name: "Purple Elite",
-        price: 104900,
-        emoji: "🟣"
-    },
-    {
-        id: 8,
-        name: "Orange Spirit",
-        price: 94900,
-        emoji: "🟠"
-    }
+// Product Data - Organized by League
+const productsByLeague = {
+    premier_league: [
+        { id: 1, name: "Premier League Classic", price: 3500, emoji: "⚪" },
+        { id: 2, name: "Premier League Striped", price: 3500, emoji: "🔵" },
+        { id: 3, name: "Premier League Red", price: 3500, emoji: "🔴" },
+        { id: 4, name: "Premier League Away", price: 3500, emoji: "⚫" }
+    ],
+    la_liga: [
+        { id: 5, name: "La Liga Home", price: 3200, emoji: "💛" },
+        { id: 6, name: "La Liga Away", price: 3200, emoji: "🤍" },
+        { id: 7, name: "La Liga Orange", price: 3200, emoji: "🟠" },
+        { id: 8, name: "La Liga Blue", price: 3200, emoji: "🔵" }
+    ],
+    serie_a: [
+        { id: 9, name: "Serie A Azzurri", price: 3300, emoji: "🔵" },
+        { id: 10, name: "Serie A White", price: 3300, emoji: "⚪" },
+        { id: 11, name: "Serie A Rossoneri", price: 3300, emoji: "🔴" },
+        { id: 12, name: "Serie A Bianconeri", price: 3300, emoji: "⚫" }
+    ],
+    bundesliga: [
+        { id: 13, name: "Bundesliga Red", price: 2900, emoji: "🔴" },
+        { id: 14, name: "Bundesliga Black", price: 2900, emoji: "⚫" },
+        { id: 15, name: "Bundesliga Yellow", price: 2900, emoji: "💛" },
+        { id: 16, name: "Bundesliga White", price: 2900, emoji: "⚪" }
+    ],
+    ligue_1: [
+        { id: 17, name: "Ligue 1 Parisian", price: 3800, emoji: "🔵" },
+        { id: 18, name: "Ligue 1 Monaco", price: 3400, emoji: "🔴" },
+        { id: 19, name: "Ligue 1 Marseille", price: 3400, emoji: "⚪" },
+        { id: 20, name: "Ligue 1 Lyon", price: 3400, emoji: "⚫" }
+    ]
+};
+
+const specialJerseys = [
+    { id: 101, name: "Vintage Classic 1990", price: 4500, emoji: "🏆" },
+    { id: 102, name: "Limited Edition Gold", price: 5200, emoji: "🟡" },
+    { id: 103, name: "Champions League Memorial", price: 4800, emoji: "👑" },
+    { id: 104, name: "World Cup Legends", price: 5500, emoji: "🌍" },
+    { id: 105, name: "Retro Future Design", price: 4200, emoji: "🚀" },
+    { id: 106, name: "Elite Diamond Edition", price: 6500, emoji: "💎" }
 ];
 
-// Shopping Cart
+// Current view state
+let currentView = 'all';
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    displayProducts();
+    displayProducts('all');
     updateCartCount();
+    setupLeagueToggle();
 });
 
-// Display Products
-function displayProducts() {
+// Setup League Toggle
+function setupLeagueToggle() {
+    const toggleButtons = document.querySelectorAll('.league-btn');
+    toggleButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            toggleButtons.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const league = this.dataset.league;
+            displayProducts(league);
+        });
+    });
+}
+
+// Display Products based on League
+function displayProducts(league) {
     const productsGrid = document.getElementById('productsGrid');
     productsGrid.innerHTML = '';
+    currentView = league;
 
-    products.forEach(product => {
+    let productsToShow = [];
+
+    if (league === 'all') {
+        productsToShow = Object.values(productsByLeague).flat();
+    } else if (league === 'special') {
+        productsToShow = specialJerseys;
+    } else {
+        productsToShow = productsByLeague[league] || [];
+    }
+
+    if (productsToShow.length === 0) {
+        productsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #888;">No jerseys available</p>';
+        return;
+    }
+
+    productsToShow.forEach(product => {
         const productCard = document.createElement('div');
         productCard.className = 'product-card';
         productCard.innerHTML = `
             <div class="product-image">${product.emoji}</div>
             <h3 class="product-name">${product.name}</h3>
             <p class="product-price">${formatPrice(product.price)} ZMW</p>
-            <button class="add-to-cart-btn" onclick="addToCart(${product.id})">Add to Cart</button>
+            <button class="add-to-cart-btn" onclick="addToCart(${product.id}, '${product.name}', ${product.price})">Add to Cart</button>
         `;
         productsGrid.appendChild(productCard);
     });
@@ -83,15 +105,16 @@ function formatPrice(price) {
 }
 
 // Add to Cart
-function addToCart(productId) {
-    const product = products.find(p => p.id === productId);
+function addToCart(productId, productName, productPrice) {
     const existingItem = cart.find(item => item.id === productId);
 
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
         cart.push({
-            ...product,
+            id: productId,
+            name: productName,
+            price: productPrice,
             quantity: 1
         });
     }
